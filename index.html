@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Orbit — Project Intelligence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Manrope',sans-serif;background:#f8fafc}
+    .mso{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-style:normal;display:inline-flex;align-items:center;line-height:1;user-select:none}
+    .mso-fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px}
+    .canvas-grid{background-size:24px 24px;background-image:radial-gradient(circle,#e2e8f0 1px,transparent 1px)}
+    .cell-over{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#b91c1c}
+    .cell-ok{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:#15803d}
+    .cell-under{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25);color:#92400e}
+    .cell-off{background:#f8fafc;border-color:#e2e8f0;color:#cbd5e1}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes chartFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes barRise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+    @keyframes lineIn{from{opacity:0}to{opacity:1}}
+    .spin{animation:spin 1s linear infinite;display:inline-block}
+    .pulse{animation:pulse 2s ease-in-out infinite}
+    .chart-anim{animation:chartFade .55s cubic-bezier(.4,0,.2,1) both}
+    .bar-rise{transform-box:fill-box;transform-origin:50% 100%;animation:barRise .5s cubic-bezier(.4,0,.2,1) both}
+    .line-in{animation:lineIn .6s ease-out both}
+    .sidebar-transition{transition:width .2s cubic-bezier(.4,0,.2,1)}
+    .heatcell{min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useRef } = React;
+
+/* ── TOKENS ─────────────────────────────────────────────────────────────── */
+const BLUE   = "#137fec";
+const BLUEbg = "#eff6ff";
+const BLUElt = "#93c5fd";
+const MONO   = {fontFamily:"'DM Mono',monospace"};
+const SANS   = {fontFamily:"'Manrope',sans-serif"};
+
+/* ── DATA ────────────────────────────────────────────────────────────────── */
+const revData=[
+  {m:"Oct",rev:41200,proj:38000},{m:"Nov",rev:52800,proj:48000},
+  {m:"Dec",rev:47300,proj:50000},{m:"Jan",rev:61400,proj:58000},
+  {m:"Feb",rev:74200,proj:70000},{m:"Mar",rev:84200,proj:78000},
+];
+const weekData=[
+  {d:"Mon",tasks:14,done:11},{d:"Tue",tasks:18,done:16},
+  {d:"Wed",tasks:12,done:9},{d:"Thu",tasks:22,done:19},
+  {d:"Fri",tasks:16,done:16},{d:"Sat",tasks:4,done:4},{d:"Sun",tasks:2,done:2},
+];
+const autoData=[{w:"W1",n:142},{w:"W2",n:178},{w:"W3",n:201},{w:"W4",n:247}];
+const clientRev=[
+  {c:"Meridian",contracted:18400,collected:18400},
+  {c:"Luma",contracted:32000,collected:24000},
+  {c:"Fold",contracted:9500,collected:9500},
+  {c:"Hartwell",contracted:14200,collected:10500},
+  {c:"Prism",contracted:28000,collected:21800},
+];
+const projects=[
+  {name:"Dashboard Redesign",client:"Meridian Co.",status:"Shipping",pct:88,trend:"+12%"},
+  {name:"Patient Portal v2",client:"Luma Health",status:"Building",pct:61,trend:"+8%"},
+  {name:"Brand Identity System",client:"Fold Studio",status:"In Review",pct:75,trend:"—"},
+  {name:"API Integration",client:"Hartwell Inc.",status:"Blocked",pct:42,trend:"-4%"},
+  {name:"ML Inference Pipeline",client:"Prism Labs",status:"Building",pct:29,trend:"+21%"},
+];
+const feedback=[
+  {id:1,client:"Meridian Co.",pri:"High",ago:"2h ago",raw:"Make it feel less corporate and more like a tool I want to use every day",parsed:["Increase visual warmth in UI","Reduce density on main view","Add microinteraction on task complete"]},
+  {id:2,client:"Luma Health",pri:"Medium",ago:"5h ago",raw:"The weekly report takes too long to generate, can we speed it up?",parsed:["Optimize report query < 2s","Add skeleton loading state","Cache previous week data"]},
+  {id:3,client:"Hartwell Inc.",pri:"High",ago:"1d ago",raw:"We need to track who approved what and when for compliance",parsed:["Audit trail on all approvals","Timestamp + user attribution","Export audit log as CSV"]},
+];
+const statusCfg={
+  "Shipping":{dot:"#22c55e",cls:"bg-slate-50 text-slate-600 border-slate-200"},
+  "Building":{dot:BLUE,cls:"bg-slate-50 text-slate-600 border-slate-200"},
+  "In Review":{dot:"#d97706",cls:"bg-slate-50 text-slate-600 border-slate-200"},
+  "Blocked":{dot:"#ef4444",cls:"bg-red-50 text-red-700 border-red-100"},
+};
+
+/* ── SVG CHART HELPERS ───────────────────────────────────────────────────── */
+function pts2path(pts){
+  if(!pts||pts.length<2)return"";
+  let d="M"+pts[0][0]+","+pts[0][1];
+  for(let i=1;i<pts.length;i++){
+    const p=pts[i-1],c=pts[i];
+    const mx=(p[0]+c[0])/2;
+    d+=" C"+mx+","+p[1]+" "+mx+","+c[1]+" "+c[0]+","+c[1];
+  }
+  return d;
+}
+
+function Spark({vals,color}){
+  if(!vals||vals.length<2)return null;
+  const W=100,H=38,pad=4;
+  const max=Math.max(...vals),min=Math.min(...vals),rng=max-min||1;
+  const xs=vals.map((_,i)=>(i/(vals.length-1))*W);
+  const ys=vals.map(v=>H-pad-((v-min)/rng)*(H-pad*2));
+  const pts=xs.map((x,i)=>[x,ys[i]]);
+  const line=pts2path(pts);
+  const area=line+" L"+W+","+H+" L0,"+H+" Z";
+  const uid="sp"+(Math.random()*1e7|0);
+  return(
+    <svg viewBox={"0 0 "+W+" "+H} preserveAspectRatio="none" className="line-in" style={{display:"block",width:"100%",height:H}}>
+      <defs>
+        <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.22"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d={area} fill={"url(#"+uid+")"}/>
+      <path d={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function AreaChart({data,xKey,s1Key,s2Key,s1Color,s2Color,fmtY,h}){
+  const W=500,H=h||200;
+  const PL=48,PR=10,PT=8,PB=28;
+  const cW=W-PL-PR,cH=H-PT-PB;
+  const all=[...data.map(d=>d[s1Key]),...(s2Key?data.map(d=>d[s2Key]):[])];
+  const maxV=Math.max(...all)*1.05,minV=0;
+  const xS=i=>PL+(i/(data.length-1))*cW;
+  const yS=v=>PT+cH-((v-minV)/(maxV-minV))*cH;
+  const ticks=[0,.25,.5,.75,1].map(f=>minV+(maxV-minV)*f);
+  const fmt=fmtY||(v=>"$"+(v/1000).toFixed(0)+"k");
+  const uid1="ac1"+(Math.random()*1e7|0);
+  const uid2="ac2"+(Math.random()*1e7|0);
+  const pts1=data.map((d,i)=>[xS(i),yS(d[s1Key])]);
+  const pts2=s2Key?data.map((d,i)=>[xS(i),yS(d[s2Key])]):null;
+  const line1=pts2path(pts1);
+  const area1=line1+" L"+xS(data.length-1)+","+(PT+cH)+" L"+xS(0)+","+(PT+cH)+" Z";
+  const line2=pts2?pts2path(pts2):null;
+  const area2=pts2?(line2+" L"+xS(data.length-1)+","+(PT+cH)+" L"+xS(0)+","+(PT+cH)+" Z"):null;
+  return(
+    <svg viewBox={"0 0 "+W+" "+H} className="chart-anim" style={{display:"block",width:"100%",height:H}}>
+      <defs>
+        <linearGradient id={uid1} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={s1Color} stopOpacity="0.14"/>
+          <stop offset="100%" stopColor={s1Color} stopOpacity="0"/>
+        </linearGradient>
+        {s2Key&&<linearGradient id={uid2} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={s2Color||"#94a3b8"} stopOpacity="0.06"/>
+          <stop offset="100%" stopColor={s2Color||"#94a3b8"} stopOpacity="0"/>
+        </linearGradient>}
+      </defs>
+      {ticks.map((v,i)=>(
+        <g key={i}>
+          <line x1={PL} y1={yS(v)} x2={W-PR} y2={yS(v)} stroke="#f1f5f9" strokeWidth="1"/>
+          <text x={PL-6} y={yS(v)+4} textAnchor="end" fill="#94a3b8" fontSize="10" fontFamily="Manrope">{fmt(v)}</text>
+        </g>
+      ))}
+      {data.map((d,i)=>(
+        <text key={i} x={xS(i)} y={H-6} textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="Manrope">{d[xKey]}</text>
+      ))}
+      {area2&&<path d={area2} fill={"url(#"+uid2+")"} className="line-in"/>}
+      {line2&&<path d={line2} fill="none" stroke={s2Color||"#cbd5e1"} strokeWidth="1.5" strokeDasharray="5 3" className="line-in"/>}
+      <path d={area1} fill={"url(#"+uid1+")"} className="line-in"/>
+      <path d={line1} fill="none" stroke={s1Color} strokeWidth="2.5" strokeLinecap="round" className="line-in"/>
+      {pts1.map(([x,y],i)=>(
+        <circle key={i} cx={x} cy={y} r="3.5" fill={s1Color} stroke="white" strokeWidth="2" className="line-in" style={{animationDelay:i*0.05+"s"}}/>
+      ))}
+    </svg>
+  );
+}
+
+function BarChart({data,xKey,bars,fmtY,h}){
+  const W=500,H=h||220;
+  const PL=50,PR=10,PT=8,PB=28;
+  const cW=W-PL-PR,cH=H-PT-PB;
+  const allV=bars.flatMap(b=>data.map(d=>d[b.key]||0));
+  const maxV=Math.max(...allV)*1.12;
+  const fmt=fmtY||(v=>"$"+(v/1000).toFixed(0)+"k");
+  const yS=v=>PT+cH-(v/maxV)*cH;
+  const groupW=cW/data.length;
+  const totalBarW=groupW*0.7;
+  const bw=totalBarW/bars.length;
+  const ticks=[0,.25,.5,.75,1].map(f=>maxV*f);
+  return(
+    <svg viewBox={"0 0 "+W+" "+H} style={{display:"block",width:"100%",height:H}}>
+      {ticks.map((v,i)=>(
+        <g key={i}>
+          <line x1={PL} y1={yS(v)} x2={W-PR} y2={yS(v)} stroke="#f1f5f9" strokeWidth="1"/>
+          <text x={PL-6} y={yS(v)+4} textAnchor="end" fill="#94a3b8" fontSize="10" fontFamily="Manrope">{fmt(v)}</text>
+        </g>
+      ))}
+      {data.map((d,di)=>{
+        const gx=PL+di*groupW+(groupW-totalBarW)/2;
+        return bars.map((b,bi)=>{
+          const bh=(d[b.key]||0)/maxV*cH;
+          const x=gx+bi*bw;
+          const y=PT+cH-bh;
+          return(
+            <rect key={bi} x={x} y={y} width={bw-2} height={bh} fill={b.color} rx="4" ry="4"
+              className="bar-rise" style={{animationDelay:(di*bars.length+bi)*0.04+"s"}}/>
+          );
+        });
+      })}
+      {data.map((d,i)=>(
+        <text key={i} x={PL+i*groupW+groupW/2} y={H-6} textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="Manrope">{d[xKey]}</text>
+      ))}
+    </svg>
+  );
+}
+
+function LineChart({data,xKey,yKey,color,fmtY,h}){
+  const W=500,H=h||180;
+  const PL=48,PR=10,PT=8,PB=28;
+  const cW=W-PL-PR,cH=H-PT-PB;
+  const vals=data.map(d=>d[yKey]);
+  const maxV=Math.max(...vals)*1.1,minV=0;
+  const xS=i=>PL+(i/(data.length-1))*cW;
+  const yS=v=>PT+cH-((v-minV)/(maxV-minV))*cH;
+  const fmt=fmtY||(v=>"$"+(v/1000).toFixed(0)+"k");
+  const ticks=[0,.25,.5,.75,1].map(f=>minV+(maxV-minV)*f);
+  const pts=data.map((d,i)=>[xS(i),yS(d[yKey])]);
+  const line=pts2path(pts);
+  const uid="lc"+(Math.random()*1e7|0);
+  return(
+    <svg viewBox={"0 0 "+W+" "+H} className="chart-anim" style={{display:"block",width:"100%",height:H}}>
+      <defs>
+        <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.12"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      {ticks.map((v,i)=>(
+        <g key={i}>
+          <line x1={PL} y1={yS(v)} x2={W-PR} y2={yS(v)} stroke="#f1f5f9" strokeWidth="1"/>
+          <text x={PL-6} y={yS(v)+4} textAnchor="end" fill="#94a3b8" fontSize="10" fontFamily="Manrope">{fmt(v)}</text>
+        </g>
+      ))}
+      {data.map((d,i)=>(
+        <text key={i} x={xS(i)} y={H-6} textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="Manrope">{d[xKey]}</text>
+      ))}
+      <path d={line+" L"+xS(data.length-1)+","+(PT+cH)+" L"+xS(0)+","+(PT+cH)+" Z"} fill={"url(#"+uid+")"} className="line-in"/>
+      <path d={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" className="line-in"/>
+      {pts.map(([x,y],i)=>(
+        <circle key={i} cx={x} cy={y} r="4" fill={color} stroke="white" strokeWidth="2" className="line-in" style={{animationDelay:i*0.05+"s"}}/>
+      ))}
+    </svg>
+  );
+}
+
+function DonutChart({slices,size}){
+  const sz=size||150,cx=sz/2,cy=sz/2,R=sz*0.33,r=sz*0.2;
+  const total=slices.reduce((s,d)=>s+d.v,0);
+  let angle=-Math.PI/2;
+  const paths=slices.map(d=>{
+    const frac=d.v/total;
+    const a0=angle,a1=angle+frac*2*Math.PI;
+    angle=a1;
+    const lf=frac>0.5?1:0;
+    const x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0);
+    const x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1);
+    const ix0=cx+r*Math.cos(a0),iy0=cy+r*Math.sin(a0);
+    const ix1=cx+r*Math.cos(a1),iy1=cy+r*Math.sin(a1);
+    return{path:`M${x0},${y0} A${R},${R} 0 ${lf},1 ${x1},${y1} L${ix1},${iy1} A${r},${r} 0 ${lf},0 ${ix0},${iy0} Z`,color:d.color};
+  });
+  return(
+    <svg viewBox={"0 0 "+sz+" "+sz} className="chart-anim" style={{display:"block",width:sz,height:sz}}>
+      {paths.map((p,i)=>(
+        <path key={i} d={p.path} fill={p.color} stroke="white" strokeWidth="2.5"/>
+      ))}
+    </svg>
+  );
+}
+
+/* ── PRIMITIVES ──────────────────────────────────────────────────────────── */
+const Card=({children,cls=""})=>(
+  <div className={"bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden "+cls}>{children}</div>
+);
+const CH=({title,desc,right})=>(
+  <div className="flex items-start justify-between px-6 pt-5 pb-4">
+    <div>
+      <p className="text-[13px] font-bold text-slate-800 leading-none mb-1">{title}</p>
+      {desc&&<p className="text-[11px] text-slate-400 font-medium mt-0.5">{desc}</p>}
+    </div>
+    {right&&<div className="ml-4 flex-shrink-0">{right}</div>}
+  </div>
+);
+const Hr=()=><div className="border-b border-slate-100"/>;
+
+function Toggle({on}){
+  const[checked,setChecked]=useState(on);
+  return(
+    <button onClick={()=>setChecked(!checked)}
+      style={{width:44,height:24,borderRadius:99,background:checked?BLUE:"#e2e8f0",border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+      <span style={{position:"absolute",top:2,left:checked?20:2,width:20,height:20,borderRadius:"50%",background:"white",boxShadow:"0 1px 3px rgba(0,0,0,.2)",transition:"left .2s"}}/>
+    </button>
+  );
+}
+
+const MC=({label,value,delta,up,sub,sparkVals,sparkColor})=>{
+  const pill=up===true?"text-blue-700 bg-blue-50":up===false?"text-red-600 bg-red-50":"text-slate-400 bg-slate-100";
+  return(
+    <Card>
+      <div className="px-5 pt-5 pb-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{label}</p>
+        <div className="flex items-baseline gap-2 mb-1">
+          <span style={{...MONO,fontSize:26,fontWeight:700,color:"#0f172a",lineHeight:1}}>{value}</span>
+          {delta&&<span className={"text-[9px] font-bold px-1.5 py-0.5 rounded-md "+pill}>{delta}</span>}
+        </div>
+        {sub&&<p className="text-[11px] text-slate-400 font-medium">{sub}</p>}
+      </div>
+      {sparkVals&&<Spark vals={sparkVals} color={sparkColor||BLUE}/>}
+    </Card>
+  );
+};
+
+/* ── TABS HELPER ─────────────────────────────────────────────────────────── */
+function Tabs({tabs,active,setActive}){
+  return(
+    <div className="flex border-b border-slate-200 px-6 gap-6">
+      {tabs.map(t=>(
+        <button key={t.id} onClick={()=>setActive(t.id)}
+          className="py-3 text-sm font-semibold transition-colors relative"
+          style={{color:active===t.id?BLUE:"#94a3b8",border:"none",background:"none",cursor:"pointer"}}>
+          {t.label}
+          {active===t.id&&<span style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:BLUE,borderRadius:2}}/>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── PAGE: OVERVIEW ──────────────────────────────────────────────────────── */
+function OverviewPage(){
+  return(
+    <div className="px-7 py-6 space-y-5">
+      <div className="grid grid-cols-4 gap-4">
+        <MC label="Revenue MTD"     value="$84.2k" delta="+18%" up={true}  sub="vs $71.4k last month" sparkVals={revData.map(d=>d.rev)} sparkColor={BLUE}/>
+        <MC label="Active Projects" value="6"      delta="+2"  up={true}  sub="across 5 clients"      sparkVals={weekData.map(d=>d.tasks)} sparkColor="#22c55e"/>
+        <MC label="Tasks Automated" value="247"    delta="+28%"up={true}  sub="this week"             sparkVals={autoData.map(d=>d.n)} sparkColor="#8b5cf6"/>
+        <MC label="Bottlenecks"     value="2"      delta="-"   up={false} sub="flagged today"         sparkVals={[1,1,3,2,2,2]} sparkColor="#ef4444"/>
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <Card cls="col-span-2">
+          <CH title="Revenue Overview" desc="Actual vs projected — last 6 months"
+            right={
+              <div className="flex items-center gap-4 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5 rounded-full" style={{background:BLUE}}/>Actual</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5 rounded-full bg-slate-300"/>Projected</span>
+              </div>
+            }
+          />
+          <Hr/>
+          <div className="px-4 pt-3 pb-4">
+            <AreaChart data={revData} xKey="m" s1Key="rev" s2Key="proj" s1Color={BLUE} s2Color="#94a3b8" h={196}/>
+          </div>
+        </Card>
+        <Card>
+          <CH title="Project Status" desc="Current distribution"/>
+          <Hr/>
+          <div className="flex flex-col items-center px-4 pt-4 pb-5">
+            <DonutChart size={148} slices={[{v:1,color:"#93c5fd"},{v:2,color:BLUE},{v:1,color:"#94a3b8"},{v:1,color:"#fca5a5"}]}/>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full mt-4">
+              {[["Shipping","#93c5fd"],["Building",BLUE],["In Review","#94a3b8"],["Blocked","#fca5a5"]].map(([n,c])=>(
+                <div key={n} className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{background:c}}/>
+                  <span className="text-[10px] font-semibold text-slate-500">{n}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CH title="Active Projects" desc="All client work this cycle"
+            right={<button className="text-[11px] font-semibold text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">Export ↗</button>}
+          />
+          <Hr/>
+          <div className="grid grid-cols-12 px-6 py-2 text-[8px] font-black tracking-widest uppercase text-slate-300">
+            <div className="col-span-5">Project</div>
+            <div className="col-span-3">Status</div>
+            <div className="col-span-4">Progress</div>
+          </div>
+          <Hr/>
+          {projects.map((p,i)=>{
+            const sc=statusCfg[p.status];
+            const barColor=p.status==="Blocked"?"#ef4444":BLUE;
+            return(
+              <div key={i}>
+                <div className="grid grid-cols-12 px-6 py-3.5 items-center hover:bg-slate-50/70 transition-colors cursor-pointer group">
+                  <div className="col-span-5">
+                    <p className="text-[12px] font-semibold text-slate-800 group-hover:text-blue-600 transition-colors leading-snug">{p.name}</p>
+                    <p className="text-[9px] text-slate-400 font-semibold mt-0.5" style={MONO}>{p.client}</p>
+                  </div>
+                  <div className="col-span-3">
+                    <span className={"inline-flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded-md border "+sc.cls}>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{background:sc.dot}}/>{p.status}
+                    </span>
+                  </div>
+                  <div className="col-span-4 pr-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[9px] font-bold text-slate-400" style={MONO}>{p.pct}%</span>
+                      <span className={"text-[8px] font-black "+(p.trend.startsWith("+")?"text-slate-400":p.trend==="—"?"text-slate-300":"text-red-400")}>{p.trend}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden bg-slate-100">
+                      <div className="h-full rounded-full" style={{width:p.pct+"%",background:barColor,opacity:p.status==="Blocked"?0.7:1}}/>
+                    </div>
+                  </div>
+                </div>
+                {i<projects.length-1&&<Hr/>}
+              </div>
+            );
+          })}
+        </Card>
+        <Card>
+          <CH title="Feedback Inbox" desc="Auto-parsed into dev requirements"
+            right={<span className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white" style={{background:BLUE}}>3</span>}
+          />
+          <Hr/>
+          {feedback.map((f,i)=>(
+            <div key={f.id}>
+              <div className="px-6 py-3.5 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200">{f.client}</span>
+                    <span className={"text-[8px] font-black px-2 py-0.5 rounded-md border "+(f.pri==="High"?"bg-red-50 text-red-500 border-red-100":"bg-slate-50 text-slate-500 border-slate-200")}>{f.pri}</span>
+                  </div>
+                  <span className="text-[9px] text-slate-400">{f.ago}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 italic mb-2 leading-snug">"{f.raw}"</p>
+                <div className="space-y-1">
+                  {f.parsed.map((r,j)=>(
+                    <div key={j} className="flex items-center gap-1.5">
+                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{background:BLUE}}/>
+                      <span className="text-[10px] text-slate-600 font-semibold">{r}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {i<feedback.length-1&&<Hr/>}
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── PAGE: CLIENTS ───────────────────────────────────────────────────────── */
+function ClientsPage(){
+  const healthRows=[
+    {name:"Dashboard Redesign",sub:"Meridian Co.",icon:"api",iconCls:"text-blue-500 bg-blue-50",health:4,label:"Stable",hcls:"text-emerald-500",tl:"Sep 12 – Oct 30",pct:75,sBg:"bg-blue-50 text-blue-600 border-blue-200",sLabel:"IN PROGRESS"},
+    {name:"Patient Portal v2",sub:"Luma Health",icon:"auto_stories",iconCls:"text-emerald-500 bg-emerald-50",health:5,label:"Excellent",hcls:"text-emerald-500",tl:"Aug 20 – Sep 30",pct:100,sBg:"bg-emerald-50 text-emerald-600 border-emerald-200",sLabel:"COMPLETED"},
+    {name:"Brand Identity",sub:"Fold Studio",icon:"palette",iconCls:"text-purple-500 bg-purple-50",health:3,label:"Stable",hcls:"text-emerald-500",tl:"Nov 1 – Jan 15",pct:60,sBg:"bg-blue-50 text-blue-600 border-blue-200",sLabel:"IN PROGRESS"},
+    {name:"API Integration",sub:"Hartwell Inc.",icon:"warning",iconCls:"text-amber-500 bg-amber-50",health:2,label:"Warning",hcls:"text-amber-500",tl:"Oct 1 – Dec 15",pct:25,sBg:"bg-amber-50 text-amber-600 border-amber-200",sLabel:"AT RISK"},
+  ];
+  const activity=[
+    {dot:BLUE,text:"Sarah M. updated ",bold:"Branding Specs",time:"2 hours ago"},
+    {dot:"#22c55e",text:"Invoice ",bold:"#INV-2024-01 paid",time:"5 hours ago"},
+    {dot:"#8b5cf6",text:"New member ",bold:"David Chen joined",time:"Yesterday"},
+    {dot:"#d97706",text:"API Integration flagged ",bold:"Blocked",time:"2 days ago"},
+  ];
+  const docs=[
+    {icon:"picture_as_pdf",icls:"text-red-500 bg-red-50",name:"NDA_Agreement.pdf",meta:"2d ago • 2.4 MB"},
+    {icon:"description",icls:"text-blue-500 bg-blue-50",name:"Project_Brief_v2.docx",meta:"5d ago • 1.1 MB"},
+    {icon:"article",icls:"text-orange-500 bg-orange-50",name:"Invoices_Q3.zip",meta:"1w ago • 15.8 MB"},
+    {icon:"add_circle",icls:"text-slate-400 bg-slate-50",name:"Upload New",meta:null,dash:true},
+  ];
+  return(
+    <div className="px-7 py-6 space-y-5">
+      <div className="grid grid-cols-3 gap-5">
+        {[
+          {icon:"account_tree",label:"Total Projects",value:"24",delta:"+4%",pos:true,extra:<div className="mt-4 flex -space-x-2">{["MD","JL","SR"].map((ini,j)=><div key={j} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500">{ini}</div>)}<div className="w-8 h-8 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400">+9</div></div>},
+          {icon:"task_alt",label:"Active Tasks",value:"48",delta:"+12%",pos:true,extra:<div className="mt-4 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{width:"65%",background:BLUE}}/></div>},
+          {icon:"schedule",label:"Hours Logged",value:"1,240h",delta:"-3%",pos:false,extra:<p className="mt-4 text-xs text-slate-400">Total capacity: 84%</p>},
+        ].map((s,i)=>(
+          <Card key={i} cls="relative group">
+            <div className="p-6">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                <span className="mso" style={{fontSize:64,color:"#94a3b8"}}>{s.icon}</span>
+              </div>
+              <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">{s.label}</p>
+              <div className="flex items-end gap-3">
+                <h2 className="text-3xl font-black text-slate-900" style={MONO}>{s.value}</h2>
+                <span className={"mb-1 text-sm font-bold px-2 py-0.5 rounded-full "+(s.pos?"text-emerald-600 bg-emerald-50":"text-orange-500 bg-orange-50")}>{s.delta}</span>
+              </div>
+              {s.extra}
+            </div>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+          <h2 className="text-[15px] font-bold text-slate-900">Project Health &amp; Status</h2>
+          <button className="text-[13px] font-bold hover:underline" style={{color:BLUE}}>View All</button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50">
+              <tr>{["Project Name","Health","Team","Timeline","Status"].map(h=>(
+                <th key={h} className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {healthRows.map((r,i)=>(
+                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className={"w-10 h-10 rounded-xl flex items-center justify-center "+r.iconCls}>
+                        <span className="mso">{r.icon}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{r.name}</p>
+                        <p className="text-xs text-slate-400 font-medium">{r.sub}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(n=>(
+                          <span key={n} className={"w-1.5 h-1.5 rounded-full "+(n<=r.health?(r.health>=4?"bg-emerald-500":r.health>=3?"bg-blue-400":"bg-amber-400"):"bg-slate-200")}/>
+                        ))}
+                      </div>
+                      <span className={"text-[10px] font-bold uppercase "+r.hcls}>{r.label}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex -space-x-1.5">
+                      {["MD","JL"].map((ini,j)=>(
+                        <div key={j} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[9px] font-black text-slate-500">{ini}</div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <p className="text-xs font-bold text-slate-800 mb-1">{r.tl}</p>
+                    <div className="w-24 h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{width:r.pct+"%",background:r.pct===100?"#22c55e":BLUE}}/>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <span className={"inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border "+r.sBg}>{r.sLabel}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      <div className="grid grid-cols-2 gap-5">
+        <Card>
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-[15px] font-bold text-slate-900">Recent Activity</h3>
+              <button className="text-slate-400 hover:text-slate-600"><span className="mso" style={{fontSize:20}}>more_horiz</span></button>
+            </div>
+            <div className="space-y-6">
+              {activity.map((a,i)=>(
+                <div key={i} className="flex gap-4 relative">
+                  <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 relative z-10" style={{background:a.dot}}/>
+                  {i<activity.length-1&&<div className="absolute left-1 top-4 w-px bg-slate-100" style={{bottom:-24}}/>}
+                  <div>
+                    <p className="text-sm text-slate-700">{a.text}<span className="font-bold">{a.bold}</span></p>
+                    <p className="text-xs text-slate-400 mt-0.5">{a.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-[15px] font-bold text-slate-900">Important Documents</h3>
+              <button className="text-slate-400 hover:text-slate-600"><span className="mso" style={{fontSize:20}}>filter_list</span></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {docs.map((d,i)=>(
+                <div key={i} className={"p-3 rounded-xl border bg-slate-50/50 hover:border-blue-300 transition-all cursor-pointer "+(d.dash?"border-dashed border-slate-200 flex flex-col items-center justify-center":"border-slate-100")}>
+                  <div className={"w-10 h-10 rounded-xl flex items-center justify-center mb-2 "+d.icls}>
+                    <span className="mso">{d.icon}</span>
+                  </div>
+                  <p className={"text-sm font-bold truncate w-full "+(d.dash?"text-slate-400 text-center":"text-slate-800")}>{d.name}</p>
+                  {d.meta&&<p className="text-[10px] text-slate-400 mt-0.5">{d.meta}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── PAGE: AUTOMATION ────────────────────────────────────────────────────── */
+function AutomationPage(){
+  const[tab,setTab]=useState("active");
+  return(
+    <div className="flex flex-col" style={{height:"calc(100vh - 56px)"}}>
+      <div className="bg-white border-b border-slate-200">
+        <div className="px-7 pt-5 pb-0 flex items-center justify-between">
+          <div>
+            <h2 className="text-[15px] font-extrabold text-slate-900">Automation Center</h2>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Smart triggers and workflow automation</p>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-opacity" style={{background:BLUE}}>
+            <span className="mso text-[18px]">add</span>Create New
+          </button>
+        </div>
+        <Tabs tabs={[{id:"active",label:"Active Automations"},{id:"editor",label:"Workflow Editor"}]} active={tab} setActive={setTab}/>
+      </div>
+
+      {tab==="active"&&(
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
+          {/* Cards grid */}
+          <div className="grid grid-cols-3 gap-5">
+            {[
+              {icon:"notifications_active",icls:"text-blue-600",ibg:"#eff6ff",label:"Notify Client on Completion",desc:"When a task's status is changed to 'Done', send an email notification to the associated client.",trigger:"Every 15m",runs:"124 runs",on:true,runColor:null},
+              {icon:"person_add",icls:"text-purple-600",ibg:"#f5f3ff",label:"Auto-Assign Developer",desc:"Automatically assign a senior developer whenever a new 'Critical' bug is reported.",trigger:"Real-time",runs:"42 runs",on:true,runColor:null},
+              {icon:"timer",icls:"text-orange-600",ibg:"#fff7ed",label:"Slack Overdue Reminder",desc:"Send a Slack message to the #dev-ops channel for any task that passes its deadline.",trigger:"Daily 9AM",runs:"Inactive",on:false,runColor:"#f97316"},
+              {icon:"account_balance_wallet",icls:"text-emerald-600",ibg:"#ecfdf5",label:"Generate Monthly Invoice",desc:"Aggregate completed hours and generate a Stripe invoice on the 1st of every month.",trigger:"Monthly",runs:"12 runs",on:true,runColor:null},
+            ].map((a,i)=>(
+              <Card key={i} cls="hover:shadow-md transition-shadow">
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 rounded-xl" style={{background:a.ibg}}>
+                      <span className={"mso "+a.icls} style={{fontSize:22}}>{a.icon}</span>
+                    </div>
+                    <Toggle on={a.on}/>
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-[15px] mb-1.5">{a.label}</h3>
+                  <p className="text-slate-500 text-[12px] mb-4 leading-relaxed">{a.desc}</p>
+                  <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <span className="mso text-[15px] text-slate-400">schedule</span>
+                      <span className="text-[11px] text-slate-400">{a.trigger}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="mso text-[15px]" style={{color:a.runColor||"#94a3b8"}}>flash_on</span>
+                      <span className="text-[11px] font-medium" style={{color:a.runColor||"#94a3b8"}}>{a.runs}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+            {/* Placeholder */}
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-300 transition-all group" style={{minHeight:200}}>
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-300 group-hover:text-blue-400 transition-colors shadow-sm mb-3 border border-slate-100">
+                <span className="mso" style={{fontSize:28}}>add</span>
+              </div>
+              <h3 className="font-bold text-slate-500 text-sm">Create Custom Automation</h3>
+              <p className="text-slate-400 text-xs px-4 mt-1">Start from scratch with our visual workflow builder.</p>
+            </div>
+          </div>
+
+          {/* Activity logs */}
+          <Card>
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 text-[14px]">Recent Activity Logs</h3>
+              <button className="text-[12px] font-semibold hover:underline" style={{color:BLUE}}>Download Report</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                  <tr>
+                    <th className="px-6 py-3">Automation</th>
+                    <th className="px-6 py-3">Status</th>
+                    <th className="px-6 py-3">Timestamp</th>
+                    <th className="px-6 py-3">Exec Time</th>
+                    <th className="px-6 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {[
+                    {name:"Notify Client on Completion",trigger:"Task #402 status changed",status:"Success",ts:"Mar 10, 2026 10:45 AM",t:"1.2s",ok:true},
+                    {name:"Auto-Assign Developer",trigger:"New Bug #992",status:"Success",ts:"Mar 10, 2026 09:12 AM",t:"0.8s",ok:true},
+                    {name:"Slack Overdue Reminder",trigger:"Cron Schedule",status:"Error",ts:"Mar 10, 2026 09:00 AM",t:"3.4s",ok:false},
+                  ].map((row,i)=>(
+                    <tr key={i} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-semibold text-slate-800 text-[13px]">{row.name}</p>
+                        <p className="text-[10px] text-slate-400">Trigger: {row.trigger}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold "+(row.ok?"bg-emerald-50 text-emerald-600":"bg-red-50 text-red-600")}>
+                          <span className={"w-1.5 h-1.5 rounded-full "+(row.ok?"bg-emerald-500":"bg-red-500")}/>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-[12px] text-slate-500">{row.ts}</td>
+                      <td className="px-6 py-4 text-[12px] text-slate-500" style={MONO}>{row.t}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="text-slate-300 hover:text-slate-500"><span className="mso text-[18px]">more_horiz</span></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400">Showing 3 of 1,245 logs</span>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 rounded-lg border border-slate-200 bg-white text-[11px] text-slate-500 hover:bg-slate-50 transition-colors">Previous</button>
+                <button className="px-3 py-1 rounded-lg border border-slate-200 bg-white text-[11px] text-slate-500 hover:bg-slate-50 transition-colors">Next</button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {tab==="editor"&&(
+        <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+          {/* Nodes library */}
+          <div className="w-48 flex-shrink-0 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+            <div className="px-4 py-4 border-b border-slate-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Nodes Library</p>
+              <div className="space-y-2">
+                {[
+                  {icon:"sensors",cls:"text-emerald-500",label:"Triggers"},
+                  {icon:"alt_route",cls:"text-amber-500",label:"Logic Gates"},
+                  {icon:"play_circle",cls:"text-blue-500",label:"Actions"},
+                  {icon:"database",cls:"text-purple-500",label:"Data Storage"},
+                ].map((n,i)=>(
+                  <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition-colors cursor-grab text-sm font-medium text-slate-700">
+                    <span className={"mso text-[18px] "+n.cls}>{n.icon}</span>{n.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="px-4 py-4 flex-1">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Recent</p>
+              {["Webhook URL","Lead Filter","CRM Sync"].map((item,i)=>(
+                <div key={i} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-100 cursor-pointer text-sm text-slate-500 font-medium transition-colors">
+                  <span className="mso text-[15px] text-slate-400">schedule</span>{item}
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-3 border-t border-slate-100">
+              <button className="w-full flex items-center justify-center gap-2 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors">
+                <span className="mso text-[15px]">save</span>Save
+              </button>
+            </div>
+          </div>
+
+          {/* Canvas */}
+          <div className="flex-1 bg-white border border-slate-200 rounded-2xl shadow-sm canvas-grid relative overflow-hidden">
+            {/* Toolbar */}
+            <div className="absolute top-4 left-5 right-5 flex items-center justify-between z-10">
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-900">Workflow Editor</h2>
+                <p className="text-[10px] text-slate-400">Multi-stage lead qualification</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                  <button className="p-1.5 hover:bg-slate-100 rounded-lg"><span className="mso text-[17px] text-slate-400">zoom_in</span></button>
+                  <span className="px-2 text-[10px] font-bold text-slate-400">100%</span>
+                  <button className="p-1.5 hover:bg-slate-100 rounded-lg"><span className="mso text-[17px] text-slate-400">zoom_out</span></button>
+                </div>
+                <button className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl font-bold text-sm shadow-lg hover:opacity-90 transition-opacity" style={{background:BLUE}}>
+                  <span className="mso text-[16px]">play_arrow</span>Run Test
+                </button>
+              </div>
+            </div>
+
+            {/* Node canvas — absolute positioned nodes + SVG overlay */}
+            <div style={{position:"relative",width:"100%",height:"100%",minWidth:840,minHeight:420}}>
+              {/* SVG connection lines */}
+              <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none",overflow:"visible"}}>
+                <defs>
+                  <marker id="arrG" markerWidth="9" markerHeight="7" refX="7" refY="3.5" orient="auto">
+                    <polygon points="0 0,9 3.5,0 7" fill="#22c55e"/>
+                  </marker>
+                  <marker id="arrR" markerWidth="9" markerHeight="7" refX="7" refY="3.5" orient="auto">
+                    <polygon points="0 0,9 3.5,0 7" fill="#ef4444"/>
+                  </marker>
+                  <marker id="arrB" markerWidth="9" markerHeight="7" refX="7" refY="3.5" orient="auto">
+                    <polygon points="0 0,9 3.5,0 7" fill={BLUE}/>
+                  </marker>
+                </defs>
+                {/* Trigger → Condition */}
+                <path d="M272,252 C302,252 302,248 332,248" fill="none" stroke={BLUE} strokeWidth="2" markerEnd="url(#arrB)"/>
+                {/* Condition → Action1 (success) */}
+                <path d="M584,212 C604,212 604,162 624,162" fill="none" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrG)"/>
+                {/* Condition → Action2 (fail) */}
+                <path d="M584,310 C604,310 604,362 624,362" fill="none" stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrR)"/>
+              </svg>
+
+              {/* Trigger node: left=52, top=177, w=220, h=150 → right center: (272,252) */}
+              <div style={{position:"absolute",left:52,top:177,width:220}}>
+                <div className="bg-white border-2 border-emerald-400 rounded-2xl shadow-xl p-5 hover:-translate-y-1 transition-transform cursor-pointer">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                      <span className="mso text-emerald-500">mail</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-slate-900">Incoming Email</p>
+                      <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Trigger</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <p className="text-[10px] text-slate-400 mb-0.5">Source Account</p>
+                    <p className="text-xs font-semibold text-slate-700">sales@company.com</p>
+                  </div>
+                </div>
+                {/* Right connector dot */}
+                <div style={{position:"absolute",right:-8,top:"50%",transform:"translateY(-50%)",width:16,height:16,borderRadius:"50%",background:"#34d399",border:"3px solid white",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+              </div>
+
+              {/* Condition node: left=332, top=157, w=252, h=190 → left:(332,252), right-top:(584,212), right-bot:(584,310) */}
+              <div style={{position:"absolute",left:332,top:157,width:252}}>
+                <div className="bg-white border-2 rounded-2xl shadow-xl overflow-hidden hover:-translate-y-1 transition-transform cursor-pointer" style={{borderColor:BLUE}}>
+                  <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-100" style={{background:BLUE+"12"}}>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{background:BLUE+"20",color:BLUE}}>
+                      <span className="mso">filter_list</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-slate-900">Lead Qualification</p>
+                      <span className="text-[10px] uppercase font-bold tracking-wider" style={{color:BLUE}}>Condition</span>
+                    </div>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    {[["Industry matches","Tech, SaaS"],["Employee count","> 50"]].map(([k,v])=>(
+                      <div key={k} className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">{k}</span>
+                        <span className="text-xs font-bold px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Left dot */}
+                <div style={{position:"absolute",left:-8,top:"50%",transform:"translateY(-50%)",width:16,height:16,borderRadius:"50%",background:BLUE,border:"3px solid white",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+                {/* Right-top dot (30% down) */}
+                <div style={{position:"absolute",right:-8,top:"30%",transform:"translateY(-50%)",width:16,height:16,borderRadius:"50%",background:"#34d399",border:"3px solid white",boxShadow:"0 1px 4px rgba(0,0,0,.2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <span className="mso text-white" style={{fontSize:9,fontVariationSettings:"'FILL' 1"}}>check</span>
+                </div>
+                {/* Right-bottom dot (70% down) */}
+                <div style={{position:"absolute",right:-8,top:"70%",transform:"translateY(-50%)",width:16,height:16,borderRadius:"50%",background:"#f87171",border:"3px solid white",boxShadow:"0 1px 4px rgba(0,0,0,.2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <span className="mso text-white" style={{fontSize:9,fontVariationSettings:"'FILL' 1"}}>close</span>
+                </div>
+              </div>
+
+              {/* Action 1: left=624, top=97, w=210, h=130 → left:(624,162) */}
+              <div style={{position:"absolute",left:624,top:97,width:210}}>
+                <div className="bg-white border-2 border-slate-200 rounded-2xl shadow-xl p-5 hover:-translate-y-1 transition-transform cursor-pointer">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-blue-500" style={{background:BLUE+"18"}}>
+                      <span className="mso">person_add</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-slate-900">Create CRM Lead</p>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Action</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full w-2/3 rounded-full" style={{background:BLUE}}/>
+                  </div>
+                </div>
+                {/* Left dot */}
+                <div style={{position:"absolute",left:-8,top:"50%",transform:"translateY(-50%)",width:16,height:16,borderRadius:"50%",background:"#94a3b8",border:"3px solid white",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+              </div>
+
+              {/* Action 2: left=624, top=297, w=210, h=130 → left:(624,362) */}
+              <div style={{position:"absolute",left:624,top:297,width:210}}>
+                <div className="bg-white border-2 border-slate-200 rounded-2xl shadow-xl p-5 hover:-translate-y-1 transition-transform cursor-pointer">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-amber-500 bg-amber-50">
+                      <span className="mso">archive</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-slate-900">Move to Archive</p>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Action</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Tagged as 'Low Priority'</p>
+                </div>
+                {/* Left dot */}
+                <div style={{position:"absolute",left:-8,top:"50%",transform:"translateY(-50%)",width:16,height:16,borderRadius:"50%",background:"#94a3b8",border:"3px solid white",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+              </div>
+            </div>
+
+            {/* Bottom toolbar */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white border border-slate-200 rounded-full px-6 py-2.5 flex items-center gap-6 shadow-xl z-10">
+              {[
+                {icon:"undo",label:"Undo",active:false},
+                {icon:"history",label:"History",active:false},
+                {icon:"center_focus_strong",label:"Center",active:false},
+                {icon:"visibility",label:"View Mode",active:true},
+              ].map((b,i,arr)=>(
+                <React.Fragment key={i}>
+                  <button className="flex items-center gap-1.5 transition-colors" style={{color:b.active?BLUE:"#94a3b8"}}>
+                    <span className="mso text-[17px]">{b.icon}</span>
+                    <span className="text-xs font-bold">{b.label}</span>
+                  </button>
+                  {i<arr.length-1&&<div className="h-4 w-px bg-slate-200"/>}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* Properties panel */}
+          <div className="w-64 flex-shrink-0 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-y-auto">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-[14px] text-slate-900">Node Properties</h3>
+              <button className="text-slate-400 hover:text-slate-600"><span className="mso text-[18px]">close</span></button>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="p-4 rounded-xl border" style={{background:BLUE+"0a",borderColor:BLUE+"22"}}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="mso text-[16px]" style={{color:BLUE}}>filter_alt</span>
+                  <span className="font-bold text-sm text-slate-900">Lead Qualification</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">Filter leads based on company profile and employee metrics.</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Node Name</label>
+                <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 outline-none" defaultValue="Lead Qualification" style={SANS}/>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Output Mapping</label>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <span className="text-xs font-bold text-emerald-700">On Success</span>
+                  <span className="text-[10px] font-bold px-2 py-1 bg-emerald-500 text-white rounded-lg uppercase">Next Node</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-50 border border-red-200">
+                  <span className="text-xs font-bold text-red-700">On Failure</span>
+                  <span className="text-[10px] font-bold px-2 py-1 bg-red-400 text-white rounded-lg uppercase">Terminate</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── PAGE: WORKLOAD ──────────────────────────────────────────────────────── */
+function WorkloadPage(){
+  const[tab,setTab]=useState("heatmap");
+
+  // Heatmap data
+  const heatTeam=[
+    {name:"Sarah Chen",role:"Lead Designer",ini:"SC",days:[
+      {h:6,label:"3 Tasks",type:"opt"},{h:8,label:"Design Sprint",type:"full"},{h:8,label:"Review",type:"full"},
+      {h:10,label:"Deadline",type:"over"},{h:4,label:"Wrap up",type:"opt"},{h:0,label:"",type:"off"},{h:0,label:"",type:"off"},
+    ]},
+    {name:"Alex Rivera",role:"Backend Engineer",ini:"AR",days:[
+      {h:8,label:"API Core",type:"full"},{h:8,label:"API Core",type:"full"},{h:5,label:"Docs",type:"opt"},
+      {h:2,label:"Meeting",type:"low"},{h:8,label:"Release",type:"full"},{h:0,label:"",type:"off"},{h:0,label:"",type:"off"},
+    ]},
+    {name:"James Wilson",role:"Project Manager",ini:"JW",days:[
+      {h:4,label:"Planning",type:"opt"},{h:4,label:"Client Sync",type:"opt"},{h:4,label:"Client Sync",type:"opt"},
+      {h:4,label:"Reporting",type:"opt"},{h:4,label:"Admin",type:"opt"},{h:0,label:"",type:"off"},{h:0,label:"",type:"off"},
+    ]},
+    {name:"Maria Garcia",role:"QA Engineer",ini:"MG",days:[
+      {h:0,label:"",type:"off2"},{h:0,label:"",type:"off2"},{h:1,label:"Setup",type:"low"},
+      {h:8,label:"Regression",type:"full"},{h:8,label:"Bug Fixes",type:"full"},{h:0,label:"",type:"off"},{h:0,label:"",type:"off"},
+    ]},
+  ];
+  const heatBg={full:BLUE,over:"#ef4444",opt:"rgba(19,127,236,0.18)",low:"rgba(19,127,236,0.08)",off:"#f8fafc",off2:"#f1f5f9"};
+  const heatTxt={full:"white",over:"white",opt:BLUE,low:"#94a3b8",off:"#e2e8f0",off2:"#cbd5e1"};
+
+  // Planner data (hour grid)
+  const planTeam=[
+    {name:"Marcus D.",role:"Product Designer",ini:"MD",hrs:[8,10,8,8,6,0,0],types:["ok","over","ok","ok","under","off","off"]},
+    {name:"Jamie L.",role:"Frontend Engineer",ini:"JL",hrs:[9,9,11,9,8,0,0],types:["over","over","over","over","ok","off","off"]},
+    {name:"Sarah R.",role:"Backend Dev",ini:"SR",hrs:[4,4,8,8,8,0,0],types:["under","under","ok","ok","ok","off","off"]},
+    {name:"Priya K.",role:"QA Lead",ini:"PK",hrs:[8,8,8,8,8,0,0],types:["ok","ok","ok","ok","ok","off","off"]},
+    {name:"Theo M.",role:"Project Manager",ini:"TM",hrs:[7,9,9,10,7,0,0],types:["under","over","over","over","under","off","off"]},
+  ];
+  const cellCls={over:"cell-over",ok:"cell-ok",under:"cell-under",off:"cell-off"};
+
+  return(
+    <div className="flex flex-col" style={{height:"calc(100vh - 56px)"}}>
+      <div className="bg-white border-b border-slate-200">
+        <div className="px-7 pt-5 pb-0 flex items-center justify-between">
+          <div>
+            <h2 className="text-[15px] font-extrabold text-slate-900">Team Workload</h2>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Resource allocation — March 10–16, 2026</p>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-opacity" style={{background:BLUE}}>
+            <span className="mso text-[18px]">add</span>Assign Task
+          </button>
+        </div>
+        <Tabs tabs={[{id:"heatmap",label:"Heatmap"},{id:"planner",label:"Capacity Planner"}]} active={tab} setActive={setTab}/>
+      </div>
+
+      {tab==="heatmap"&&(
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+          {/* Legend */}
+          <div className="flex items-center gap-6 text-sm font-medium">
+            {[["#f1f5f9","#94a3b8","Under (0–4h)"],["rgba(19,127,236,0.18)",BLUE,"Optimal (4–7h)"],[BLUE,"white","Full (8h)"],["#ef4444","white","Overtime (8h+)"]].map(([bg,tc,lbl],i)=>(
+              <div key={i} className="flex items-center gap-2">
+                <span style={{width:12,height:12,borderRadius:3,background:bg,flexShrink:0,display:"inline-block"}}/>
+                <span className="text-[12px] text-slate-500">{lbl}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Grid */}
+          <Card cls="overflow-hidden">
+            <div style={{display:"grid",gridTemplateColumns:"220px repeat(7,1fr)"}}>
+              {/* Header */}
+              <div className="p-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border-b border-slate-200">Team Member</div>
+              {["Mon 10","Tue 11","Wed 12","Thu 13","Fri 14","Sat 15","Sun 16"].map((d,i)=>(
+                <div key={i} className="p-3 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border-b border-l border-slate-200"
+                  style={i===2?{color:BLUE}:{}}>{d}</div>
+              ))}
+              {/* Rows */}
+              {heatTeam.map((m,ri)=>(
+                <React.Fragment key={ri}>
+                  <div className="flex items-center gap-3 p-4 border-b border-slate-100">
+                    <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[11px] font-black text-slate-600 flex-shrink-0">{m.ini}</div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{m.name}</p>
+                      <p className="text-xs text-slate-400">{m.role}</p>
+                    </div>
+                  </div>
+                  {m.days.map((day,di)=>(
+                    <div key={di} className="heatcell border-b border-l border-slate-100" style={{background:heatBg[day.type]}}>
+                      {day.h>0&&<span className="text-sm font-bold" style={{color:heatTxt[day.type]}}>{day.h}h</span>}
+                      {day.label&&<span className="text-[9px] uppercase font-semibold mt-0.5 text-center leading-tight" style={{color:heatTxt[day.type],opacity:day.type==="full"||day.type==="over"?0.85:0.7}}>{day.label}</span>}
+                    </div>
+                  ))}
+                </React.Fragment>
+              ))}
+            </div>
+          </Card>
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              {label:"Total Hours",value:"156h",sub:"+12% vs last week",subColor:"#22c55e"},
+              {label:"Average Capacity",value:"74%",sub:"Optimal range",subColor:BLUE},
+              {label:"Over-capacity",value:"3",sub:"Needs attention",subColor:"#ef4444",valColor:"#ef4444"},
+              {label:"Under-utilized",value:"1",sub:"Available resources",subColor:"#94a3b8"},
+            ].map((s,i)=>(
+              <Card key={i}>
+                <div className="p-5">
+                  <p className="text-sm font-medium text-slate-500 mb-2">{s.label}</p>
+                  <p className="text-[26px] font-bold" style={{...MONO,color:s.valColor||"#0f172a",lineHeight:1}}>{s.value}</p>
+                  <p className="text-xs font-medium mt-1" style={{color:s.subColor}}>{s.sub}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab==="planner"&&(
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+          <div className="grid grid-cols-3 gap-4">
+            <MC label="Avg. Utilization"   value="84.5%" delta="+4.2%" up={true}  sub="Healthy range: 70–90%"/>
+            <MC label="Over-capacity"      value="1 Member" delta="—"  up={null} sub="Requires immediate attention"/>
+            <MC label="Total Billable Hrs" value="480h"   delta="+28h" up={true}  sub="Target: 520h this week"/>
+          </div>
+          <Card>
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <h3 className="text-sm font-bold text-slate-900">March 10 – March 16, 2026</h3>
+                <div className="flex border border-slate-200 rounded-lg overflow-hidden">
+                  <button className="p-1 px-2 hover:bg-slate-100 border-r border-slate-200"><span className="mso text-sm text-slate-500">chevron_left</span></button>
+                  <button className="p-1 px-2 hover:bg-slate-100"><span className="mso text-sm text-slate-500">chevron_right</span></button>
+                </div>
+              </div>
+              <div className="flex items-center gap-5">
+                {[["cell-over","Overloaded"],["cell-ok","Optimal"],["cell-under","Under"]].map(([cls,lbl])=>(
+                  <div key={lbl} className="flex items-center gap-2">
+                    <div className={"w-3 h-3 rounded-full border "+cls}/>
+                    <span className="text-xs text-slate-500">{lbl}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                    <th className="px-6 py-4 border-b border-slate-200 w-56">Resource</th>
+                    {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>(
+                      <th key={d} className="px-2 py-4 border-b border-slate-200 text-center">{d}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {planTeam.map((m,i)=>(
+                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[11px] font-black text-slate-600">{m.ini}</div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{m.name}</p>
+                            <p className="text-xs text-slate-400">{m.role}</p>
+                          </div>
+                        </div>
+                      </td>
+                      {m.hrs.map((h,j)=>(
+                        <td key={j} className="px-2 py-4">
+                          <div className={"mx-auto w-12 h-12 flex items-center justify-center rounded-xl border text-xs font-bold transition-transform hover:scale-110 cursor-pointer "+cellCls[m.types[j]]}>
+                            {h}h
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-3 border-t border-slate-100 flex items-center gap-2">
+              <span className="mso text-sm text-slate-400">info</span>
+              <span className="text-[11px] text-slate-400">Capacity calculated based on standard 40-hour work week.</span>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── PAGE: REVENUE ───────────────────────────────────────────────────────── */
+function RevenuePage(){
+  const invoices=[
+    {client:"Luma Health",days:"12 days overdue",amount:"$8,000",status:"Overdue",dot:"#ef4444",bg:"#fef2f2",tc:"#ef4444"},
+    {client:"Hartwell Inc.",days:"Due in 3 days",amount:"$3,700",status:"Pending",dot:"#d97706",bg:"#fffbeb",tc:"#d97706"},
+    {client:"Prism Labs",days:"Sent today",amount:"$6,200",status:"Sent",dot:BLUE,bg:BLUEbg,tc:BLUE},
+  ];
+  return(
+    <div className="px-7 py-6 space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        <MC label="Total Contracted" value="$102.1k" delta="+22%" up={true}  sub="This quarter" sparkVals={revData.map(d=>d.proj)} sparkColor="#94a3b8"/>
+        <MC label="Collected MTD"    value="$84.2k"  delta="+18%" up={true}  sub="vs last month" sparkVals={revData.map(d=>d.rev)} sparkColor={BLUE}/>
+        <MC label="Outstanding"      value="$17.9k"  delta="—"    up={null}  sub="2 invoices pending" sparkVals={[8000,12000,9000,17900]} sparkColor="#d97706"/>
+      </div>
+      <Card>
+        <CH title="Revenue by Client" desc="Contracted vs collected — all active clients"/>
+        <Hr/>
+        <div className="px-4 pt-3 pb-4">
+          <BarChart data={clientRev} xKey="c" bars={[{key:"contracted",color:"#e2e8f0"},{key:"collected",color:BLUE}]} h={228}/>
+        </div>
+      </Card>
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CH title="Revenue Trend" desc="Monthly actual — last 6 months"/>
+          <Hr/>
+          <div className="px-4 pt-3 pb-4">
+            <LineChart data={revData} xKey="m" yKey="rev" color={BLUE} h={188}/>
+          </div>
+        </Card>
+        <Card>
+          <CH title="Invoice Status" desc="Open and recent invoices"/>
+          <Hr/>
+          <div className="divide-y divide-slate-100">
+            {invoices.map(inv=>(
+              <div key={inv.client} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:inv.dot}}/>
+                <div className="flex-1">
+                  <p className="text-[13px] font-semibold text-slate-800">{inv.client}</p>
+                  <p className="text-[10px] text-slate-400">{inv.days}</p>
+                </div>
+                <span className="text-[13px] font-bold text-slate-700" style={MONO}>{inv.amount}</span>
+                <span className="text-[9px] font-bold px-2.5 py-1 rounded-full" style={{background:inv.bg,color:inv.tc}}>{inv.status}</span>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-4">
+            <button className="w-full py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">View All Invoices →</button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── PAGE: FEEDBACK ──────────────────────────────────────────────────────── */
+function FeedbackPage(){
+  const[text,setText]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[parsed,setParsed]=useState(null);
+  const go=()=>{
+    if(!text.trim())return;
+    setLoading(true);setParsed(null);
+    setTimeout(()=>{
+      setLoading(false);
+      setParsed(["Extract key action items from feedback","Assign priority by client tier","Route to relevant project backlog","Generate summary for weekly standup"]);
+    },1400);
+  };
+  return(
+    <div className="px-7 py-6 space-y-5">
+      <Card>
+        <div className="flex items-start justify-between px-6 pt-5 pb-4">
+          <div>
+            <p className="text-[13px] font-bold text-slate-800 leading-none mb-1">Submit Feedback</p>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Paste raw client feedback — AI extracts action items</p>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border" style={{background:BLUEbg,borderColor:BLUElt+"88"}}>
+            <span className="pulse w-1.5 h-1.5 rounded-full inline-block" style={{background:BLUE}}/>
+            <span className="text-[10px] font-bold" style={{color:BLUE}}>AI-Parsed</span>
+          </div>
+        </div>
+        <Hr/>
+        <div className="px-6 py-4 space-y-3">
+          <textarea value={text} onChange={e=>{setText(e.target.value);setParsed(null);}}
+            placeholder="Paste client feedback here… e.g. 'The onboarding flow is confusing and takes too many steps.'"
+            rows={3}
+            style={{...SANS,width:"100%",padding:"12px 14px",borderRadius:12,border:"1px solid #e2e8f0",fontSize:12,color:"#0f172a",background:"#f8fafc",outline:"none",resize:"vertical",lineHeight:1.6}}
+            onFocus={e=>e.target.style.borderColor=BLUE}
+            onBlur={e=>e.target.style.borderColor="#e2e8f0"}
+          />
+          <div className="flex items-center gap-3">
+            <select className="flex-1 text-[12px] border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 outline-none bg-white font-medium" style={SANS}>
+              {projects.map(p=><option key={p.name}>{p.name} — {p.client}</option>)}
+            </select>
+            <button onClick={go} disabled={loading||!text.trim()} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-opacity flex-shrink-0" style={{background:(!text.trim()||loading)?"#93c5fd":BLUE,cursor:(!text.trim()||loading)?"not-allowed":"pointer"}}>
+              {loading
+                ?<><span className="spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"/>Parsing…</>
+                :<>Parse &amp; Submit →</>}
+            </button>
+          </div>
+          {parsed&&(
+            <div className="p-4 rounded-xl border" style={{background:BLUEbg,borderColor:BLUElt+"66"}}>
+              <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{color:BLUElt}}>Extracted Requirements</p>
+              <ul className="space-y-2">
+                {parsed.map((r,i)=>(
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="font-black text-sm flex-shrink-0 mt-0.5" style={{color:BLUE}}>✓</span>
+                    <span className="text-[12px] text-slate-700 font-medium">{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </Card>
+      <Card>
+        <CH title="Feedback Inbox" desc="All parsed client feedback — last 7 days"
+          right={
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-500">2 High Priority</span>
+              <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 hover:bg-slate-50">Filter</button>
+            </div>
+          }
+        />
+        <Hr/>
+        <div className="divide-y divide-slate-100">
+          {feedback.map(f=>(
+            <div key={f.id} className="px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{f.client}</span>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{background:f.pri==="High"?"#fef2f2":"#fffbeb",color:f.pri==="High"?"#ef4444":"#d97706"}}>{f.pri}</span>
+                <span className="text-[9px] text-slate-300 ml-auto">{f.ago}</span>
+              </div>
+              <p className="text-[12px] italic text-slate-500 mb-3 leading-relaxed">"{f.raw}"</p>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">AI-Extracted Actions</p>
+                <ul className="space-y-1.5">
+                  {f.parsed.map((r,j)=>(
+                    <li key={j} className="flex items-start gap-2">
+                      <span className="font-bold flex-shrink-0" style={{color:BLUE,fontSize:13,lineHeight:"1.3"}}>›</span>
+                      <span className="text-[11px] text-slate-600 font-medium">{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ── SHELL ───────────────────────────────────────────────────────────────── */
+const NAV=[
+  {id:"overview",  icon:"grid_view",       label:"Overview"},
+  {id:"clients",   icon:"business_center", label:"Clients"},
+  {id:"automation",icon:"auto_fix_high",   label:"Automation"},
+  {id:"workload",  icon:"calendar_today",  label:"Workload"},
+  {id:"revenue",   icon:"payments",        label:"Revenue"},
+  {id:"feedback",  icon:"forum",           label:"Feedback",badge:"3"},
+];
+const CLIENTS_LIST=[
+  {name:"Meridian Co.",dot:BLUE},
+  {name:"Luma Health",dot:"#22c55e"},
+  {name:"Fold Studio",dot:"#a855f7"},
+  {name:"Hartwell Inc.",dot:"#f59e0b"},
+  {name:"Prism Labs",dot:"#ef4444"},
+];
+const TITLES={overview:"Dashboard",clients:"Clients",automation:"Automation",workload:"Workload",revenue:"Revenue",feedback:"Feedback"};
+
+function Sidebar({page,setPage}){
+  const[col,setCol]=useState(false);
+  const w=col?52:224;
+  return(
+    <div className="sidebar-transition" style={{width:w,flexShrink:0,background:"white",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,overflow:"hidden",...SANS}}>
+      {/* Logo + toggle */}
+      <div style={{padding:"16px 12px 12px",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between"}}>
+        {!col&&(
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:30,height:30,borderRadius:9,background:BLUE,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <span className="mso mso-fill" style={{fontSize:15,color:"white"}}>radar</span>
+            </div>
+            <div>
+              <span style={{fontWeight:800,fontSize:15,color:"#0f172a",letterSpacing:-0.3}}>Orbit</span>
+              <p style={{fontSize:8,fontWeight:700,letterSpacing:"0.12em",color:"#cbd5e1",textTransform:"uppercase",marginTop:1}}>Project Intelligence</p>
+            </div>
+          </div>
+        )}
+        {col&&(
+          <div style={{width:30,height:30,borderRadius:9,background:BLUE,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span className="mso mso-fill" style={{fontSize:15,color:"white"}}>radar</span>
+          </div>
+        )}
+        <button onClick={()=>setCol(!col)}
+          style={{width:26,height:26,borderRadius:7,background:"#f8fafc",border:"1px solid #e2e8f0",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",flexShrink:0,marginLeft:col?0:8}}
+          onMouseEnter={e=>{e.currentTarget.style.background="#f1f5f9";}}
+          onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";}}>
+          <span className="mso" style={{fontSize:15}}>{col?"chevron_right":"chevron_left"}</span>
+        </button>
+      </div>
+      <div style={{borderBottom:"1px solid #f1f5f9"}}/>
+
+      {/* Nav */}
+      <nav style={{padding:"10px 8px",flex:1,overflowY:"auto",overflowX:"hidden"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          {NAV.map(n=>{
+            const active=page===n.id;
+            return(
+              <button key={n.id} onClick={()=>setPage(n.id)}
+                title={col?n.label:""}
+                style={{display:"flex",alignItems:"center",gap:col?0:9,padding:col?"9px":"8px 11px",borderRadius:11,border:"none",cursor:"pointer",textAlign:"left",background:active?BLUE:"transparent",color:active?"white":"#94a3b8",width:"100%",transition:"all 0.15s",...SANS,justifyContent:col?"center":"flex-start"}}
+                onMouseEnter={e=>{if(!active){e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#475569";}}}
+                onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color="#94a3b8";}}}>
+                <span className="mso" style={{fontSize:18,flexShrink:0}}>{n.icon}</span>
+                {!col&&<span style={{fontSize:13,fontWeight:active?700:500,flex:1}}>{n.label}</span>}
+                {!col&&n.badge&&<span style={{background:active?"rgba(255,255,255,0.25)":"#137fec",color:"white",fontSize:9,fontWeight:700,borderRadius:99,padding:"1px 6px"}}>{n.badge}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {!col&&(
+          <>
+            <div style={{borderBottom:"1px solid #f1f5f9",margin:"12px 0"}}/>
+            <p style={{fontSize:9,fontWeight:700,letterSpacing:"0.1em",color:"#cbd5e1",textTransform:"uppercase",marginBottom:8,paddingLeft:4}}>Clients</p>
+            {CLIENTS_LIST.map(c=>(
+              <div key={c.name} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 11px",borderRadius:8,cursor:"pointer"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:c.dot,flexShrink:0}}/>
+                <span style={{fontSize:11,color:"#64748b",fontWeight:500}}>{c.name}</span>
+              </div>
+            ))}
+          </>
+        )}
+      </nav>
+
+      {/* User */}
+      <div style={{borderTop:"1px solid #f1f5f9",padding:"12px 10px"}}>
+        {col?(
+          <div style={{display:"flex",justifyContent:"center"}}>
+            <div style={{width:32,height:32,borderRadius:"50%",background:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#64748b"}}>SR</div>
+          </div>
+        ):(
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:32,height:32,borderRadius:"50%",background:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#64748b",flexShrink:0}}>SR</div>
+            <div>
+              <p style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>Sarah R.</p>
+              <p style={{fontSize:10,color:"#94a3b8",fontWeight:500}}>Product Lead</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TopNav({page}){
+  return(
+    <div style={{height:56,background:"white",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",padding:"0 24px",gap:16,flexShrink:0,...SANS}}>
+      <h1 style={{fontSize:14,fontWeight:800,color:"#0f172a",letterSpacing:-0.3,width:120,flexShrink:0}}>{TITLES[page]}</h1>
+      <div style={{flex:1,maxWidth:360,display:"flex",alignItems:"center",height:36,borderRadius:12,background:"#f1f5f9",overflow:"hidden"}}>
+        <span className="mso" style={{fontSize:18,color:"#94a3b8",padding:"0 8px 0 12px"}}>search</span>
+        <input placeholder="Search projects, tasks…" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:13,color:"#0f172a",...SANS,paddingRight:12}}/>
+      </div>
+      <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+        {["notifications","settings"].map(icon=>(
+          <button key={icon} style={{width:36,height:36,borderRadius:10,background:"#f1f5f9",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748b"}}
+            onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"}
+            onMouseLeave={e=>e.currentTarget.style.background="#f1f5f9"}>
+            <span className="mso" style={{fontSize:20}}>{icon}</span>
+          </button>
+        ))}
+        <div style={{width:1,height:28,background:"#e2e8f0",margin:"0 4px"}}/>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>Sarah R.</span>
+          <span style={{fontSize:10,color:"#94a3b8",fontWeight:500}}>Product Lead</span>
+        </div>
+        <div style={{width:36,height:36,borderRadius:"50%",background:"#e2e8f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#64748b",border:"2px solid white",boxShadow:"0 0 0 2px #e2e8f0"}}>SR</div>
+        <div style={{width:1,height:28,background:"#e2e8f0",margin:"0 4px"}}/>
+        <button style={{height:34,padding:"0 14px",borderRadius:10,background:BLUE,border:"none",color:"white",fontSize:12,fontWeight:700,cursor:"pointer",...SANS,whiteSpace:"nowrap"}}
+          onMouseEnter={e=>e.currentTarget.style.opacity="0.9"}
+          onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+          + New Project
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const[page,setPage]=useState("overview");
+  const pages={
+    overview:<OverviewPage/>,
+    clients:<ClientsPage/>,
+    automation:<AutomationPage/>,
+    workload:<WorkloadPage/>,
+    revenue:<RevenuePage/>,
+    feedback:<FeedbackPage/>,
+  };
+  return(
+    <div style={{display:"flex",height:"100vh",overflow:"hidden",...SANS}}>
+      <Sidebar page={page} setPage={setPage}/>
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:"#f8fafc"}}>
+        <TopNav page={page}/>
+        <div style={{flex:1,overflowY:"auto"}}>
+          {pages[page]}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
