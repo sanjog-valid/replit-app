@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Manrope',sans-serif;background:#5e7185}
+    body{font-family:'Manrope',sans-serif;background:#e8edf3}
     .mso{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-style:normal;display:inline-flex;align-items:center;line-height:1;user-select:none}
     .mso-fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
     ::-webkit-scrollbar{width:4px;height:4px}
@@ -37,23 +37,36 @@
     .dm .text-slate-700,.dm .text-slate-600{color:#c4cdd9!important}
     .dm .text-slate-500{color:#8892a4!important}
     .dm .text-slate-400,.dm .text-slate-300{color:#5e6b7e!important}
-    .dm .bg-slate-50,.dm .bg-slate-100,.dm .bg-slate-50\/50,.dm .bg-slate-50\/70{background:#1e2a3a!important}
-    .dm .border-slate-50,.dm .border-slate-100,.dm .border-slate-200{border-color:#1e2a3a!important}
-    .dm .divide-slate-100>*{border-color:#1e2a3a!important}
-    .dm .hover\:bg-slate-50:hover,.dm .hover\:bg-slate-50\/70:hover,.dm .hover\:bg-slate-100:hover{background:rgba(255,255,255,0.04)!important}
-    .dm thead,.dm .bg-slate-50{background:#1a2433!important}
-    .dm .text-slate-400{color:#5e6b7e!important}
+    .dm .bg-slate-50,.dm .bg-slate-100,.dm .bg-slate-50\/50,.dm .bg-slate-50\/70{background:#1a2030!important}
+    .dm .border-slate-50,.dm .border-slate-100,.dm .border-slate-200{border-color:#222d3e!important}
+    .dm .divide-slate-100>*{border-color:#222d3e!important}
+    .dm .hover\:bg-slate-50:hover,.dm .hover\:bg-slate-50\/70:hover,.dm .hover\:bg-slate-100:hover{background:rgba(255,255,255,0.05)!important}
+    .dm thead{background:#1a2030!important}
     .dm th{color:#5e6b7e!important}
-    .dm .bg-blue-50{background:rgba(19,127,236,0.12)!important}
-    .dm .bg-red-50{background:rgba(239,68,68,0.1)!important}
-    .dm .bg-emerald-50{background:rgba(34,197,94,0.1)!important}
-    .dm .bg-amber-50{background:rgba(245,158,11,0.1)!important}
-    .dm .bg-purple-50{background:rgba(139,92,246,0.1)!important}
-    .dm .bg-orange-50{background:rgba(249,115,22,0.1)!important}
+    /* Colored pill/badge bg — more saturated in dark */
+    .dm .bg-blue-50{background:rgba(19,127,236,0.18)!important}
+    .dm .text-blue-700,.dm .text-blue-600{color:#60a5fa!important}
+    .dm .border-blue-200,.dm .border-blue-100{border-color:rgba(19,127,236,0.3)!important}
+    .dm .bg-red-50{background:rgba(239,68,68,0.18)!important}
+    .dm .text-red-600,.dm .text-red-700,.dm .text-red-500{color:#f87171!important}
+    .dm .border-red-100,.dm .border-red-200{border-color:rgba(239,68,68,0.3)!important}
+    .dm .bg-emerald-50{background:rgba(34,197,94,0.18)!important}
+    .dm .text-emerald-600,.dm .text-emerald-500{color:#4ade80!important}
+    .dm .border-emerald-200,.dm .border-emerald-100{border-color:rgba(34,197,94,0.3)!important}
+    .dm .bg-amber-50{background:rgba(245,158,11,0.18)!important}
+    .dm .text-amber-700,.dm .text-amber-600{color:#fbbf24!important}
+    .dm .border-amber-100,.dm .border-amber-200{border-color:rgba(245,158,11,0.3)!important}
+    .dm .bg-purple-50{background:rgba(139,92,246,0.18)!important}
+    .dm .text-purple-600,.dm .text-purple-500{color:#a78bfa!important}
+    .dm .bg-orange-50{background:rgba(249,115,22,0.18)!important}
+    .dm .text-orange-500{color:#fb923c!important}
     .dm .bg-white{background:#1c2435!important}
-    .dm .border-slate-100{border-color:#1e2a3a!important}
     .dm .canvas-grid{background-image:radial-gradient(circle,#1e2a3a 1px,transparent 1px)!important}
-    .dm .cell-off{background:#1a2433!important;border-color:#1e2a3a!important}
+    .dm .cell-off{background:#1a2030!important;border-color:#222d3e!important}
+    /* Ghost icons invisible in dark */
+    .dm .opacity-5{opacity:0.02!important}
+    /* Tooltip dark */
+    .dm .shadow-xl.bg-white{background:#1c2435!important;border-color:#222d3e!important}
   </style>
 </head>
 <body>
@@ -777,6 +790,8 @@ function AutomationPage(){
 
 /* ── PAGE: WORKLOAD (charts from orbit-dashboard.jsx + 2 tabs) ───────────── */
 function WorkloadPage(){
+  const dm=useDM();
+  const trackDm=dm?"#2a3a52":TRACK;
   const[tab,setTab]=useState("heatmap");
 
   const heatTeam=[
@@ -847,7 +862,7 @@ function WorkloadPage(){
                 <XAxis dataKey="day" tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
                 <YAxis tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<Tip/>}/>
-                <Bar dataKey="tasks"     name="Assigned"  fill={TRACK} radius={[4,4,0,0]}/>
+                <Bar dataKey="tasks"     name="Assigned"  fill={trackDm} radius={[4,4,0,0]}/>
                 <Bar dataKey="completed" name="Completed" fill={BLUE}  radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
@@ -990,6 +1005,8 @@ function WorkloadPage(){
 
 /* ── PAGE: REVENUE (charts from orbit-dashboard.jsx, BLUE substituted) ──── */
 function RevenuePage(){
+  const dm=useDM();
+  const trackDm=dm?"#2a3a52":TRACK;
   return(
     <div className="px-7 py-6 space-y-5">
       <div className="grid grid-cols-3 gap-4">
@@ -1007,7 +1024,7 @@ function RevenuePage(){
               <XAxis dataKey="client" tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
               <Tooltip content={<Tip/>}/>
-              <Bar dataKey="contracted" name="Contracted" fill={TRACK} radius={[5,5,0,0]}/>
+              <Bar dataKey="contracted" name="Contracted" fill={trackDm} radius={[5,5,0,0]}/>
               <Bar dataKey="collected"  name="Collected"  fill={BLUE}  radius={[5,5,0,0]}/>
             </BarChart>
           </ResponsiveContainer>
@@ -1063,6 +1080,7 @@ function RevenuePage(){
 
 /* ── PAGE: FEEDBACK ──────────────────────────────────────────────────────── */
 function FeedbackPage(){
+  const dm=useDM();
   const[text,setText]=useState("");
   const[loading,setLoading]=useState(false);
   const[parsed,setParsed]=useState(null);
@@ -1087,10 +1105,10 @@ function FeedbackPage(){
         <Hr/>
         <div className="px-6 py-4 space-y-3">
           <textarea value={text} onChange={e=>{setText(e.target.value);setParsed(null);}} placeholder="Paste client feedback here…" rows={3}
-            style={{...SANS,width:"100%",padding:"12px 14px",borderRadius:12,border:"1px solid #e2e8f0",fontSize:12,color:"#0f172a",background:"#f8fafc",outline:"none",resize:"vertical",lineHeight:1.6}}
-            onFocus={e=>e.target.style.borderColor=BLUE} onBlur={e=>e.target.style.borderColor="#e2e8f0"}/>
+            style={{...SANS,width:"100%",padding:"12px 14px",borderRadius:12,border:`1px solid ${dm?DT.bd:"#e2e8f0"}`,fontSize:12,color:dm?DT.t1:"#0f172a",background:dm?DT.inp:"#f8fafc",outline:"none",resize:"vertical",lineHeight:1.6}}
+            onFocus={e=>e.target.style.borderColor=BLUE} onBlur={e=>e.target.style.borderColor=dm?DT.bd:"#e2e8f0"}/>
           <div className="flex items-center gap-3">
-            <select className="flex-1 text-[12px] border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 outline-none bg-white font-medium" style={SANS}>
+            <select className="flex-1 text-[12px] border rounded-xl px-3 py-2.5 outline-none font-medium" style={{...SANS,borderColor:dm?DT.bd:"#e2e8f0",background:dm?DT.inp:"white",color:dm?DT.t1:"#334155"}}>
               {projects.map(p=><option key={p.name}>{p.name} — {p.client}</option>)}
             </select>
             <button onClick={go} disabled={loading||!text.trim()} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold flex-shrink-0" style={{background:(!text.trim()||loading)?"#93c5fd":BLUE,cursor:(!text.trim()||loading)?"not-allowed":"pointer",...SANS}}>
@@ -1115,7 +1133,7 @@ function FeedbackPage(){
             <div key={f.id} className="px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{f.client}</span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{background:f.priority==="High"?"#fef2f2":"#fffbeb",color:f.priority==="High"?"#ef4444":"#d97706"}}>{f.priority}</span>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{background:f.priority==="High"?(dm?"rgba(239,68,68,0.2)":"#fef2f2"):(dm?"rgba(245,158,11,0.2)":"#fffbeb"),color:f.priority==="High"?(dm?"#f87171":"#ef4444"):(dm?"#fbbf24":"#d97706")}}>{f.priority}</span>
                 <span className="text-[9px] text-slate-300 ml-auto">{f.time}</span>
               </div>
               <p className="text-[12px] italic text-slate-500 mb-3 leading-relaxed">"{f.raw}"</p>
@@ -1292,9 +1310,9 @@ function App(){
   };
   return(
     <DMCtx.Provider value={dm}>
-      <div className={dm?"dm":""} style={{display:"flex",height:"100vh",overflow:"hidden",...SANS,background:dm?DT.body:"#5e7185"}}>
+      <div className={dm?"dm":""} style={{display:"flex",height:"100vh",overflow:"hidden",...SANS,background:dm?DT.body:"#e8edf3"}}>
         <Sidebar page={page} setPage={setPage}/>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:dm?DT.body:"#5e7185"}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:dm?DT.body:"#e8edf3"}}>
           <TopNav page={page} dm={dm} setDm={setDm}/>
           <div style={{flex:1,overflowY:"auto"}}>
             {pages[page]}
