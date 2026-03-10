@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Manrope',sans-serif;background:#f8fafc}
+    body{font-family:'Manrope',sans-serif;background:#d5dde8}
     .mso{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-style:normal;display:inline-flex;align-items:center;line-height:1;user-select:none}
     .mso-fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
     ::-webkit-scrollbar{width:4px;height:4px}
@@ -130,13 +130,13 @@ const Tip = ({active,payload,label}) => {
 
 /* ── PRIMITIVES ──────────────────────────────────────────────────────────── */
 const Card=({children,className=""})=>(
-  <div className={"bg-white border border-slate-100 rounded-2xl shadow-sm "+className}>{children}</div>
+  <div className={"bg-white rounded-2xl "+className} style={{border:"1px solid rgba(255,255,255,0.8)",boxShadow:"0 4px 16px rgba(0,0,0,0.08),0 1px 4px rgba(0,0,0,0.05)"}}>{children}</div>
 );
 const CH=({title,desc,right})=>(
   <div className="flex items-start justify-between px-6 pt-5 pb-4">
     <div>
       <p className="text-[13px] font-bold text-slate-800 leading-none mb-1">{title}</p>
-      {desc&&<p className="text-[11px] text-slate-400 font-medium">{desc}</p>}
+      {desc&&<p className="text-[11px] text-slate-500 font-medium">{desc}</p>}
     </div>
     {right&&<div className="flex-shrink-0 ml-4">{right}</div>}
   </div>
@@ -162,7 +162,7 @@ const MC=({label,value,delta,sub,chartData,chartKey,chartColor})=>{
     <Card>
       <div className="pt-5 pb-4 px-5">
         <div className="flex items-start justify-between mb-3">
-          <p className="text-[9px] font-black text-slate-300 tracking-widest uppercase leading-none">{label}</p>
+          <p className="text-[9px] font-black text-slate-500 tracking-widest uppercase leading-none">{label}</p>
           {delta&&(
             <span className={"text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none "+(neutral?"bg-slate-100 text-slate-400":pos?"text-blue-700 bg-blue-50":"text-red-600 bg-red-50")}>
               {delta}
@@ -170,7 +170,7 @@ const MC=({label,value,delta,sub,chartData,chartKey,chartColor})=>{
           )}
         </div>
         <p className="text-[28px] font-extrabold text-slate-900 leading-none tracking-tight mb-1" style={MONO}>{value}</p>
-        {sub&&<p className="text-[10px] text-slate-400 font-medium">{sub}</p>}
+        {sub&&<p className="text-[10px] text-slate-500 font-medium">{sub}</p>}
         {chartData&&(
           <div className="mt-3 -mx-1">
             <ResponsiveContainer width="100%" height={34}>
@@ -242,9 +242,9 @@ function OverviewPage(){
                     <stop offset="100%" stopColor="#94a3b8" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false}/>
-                <XAxis dataKey="month" tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf3" vertical={false}/>
+                <XAxis dataKey="month" tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
                 <Tooltip content={<Tip/>}/>
                 <Area type="monotone" dataKey="projected" name="Projected" stroke="#cbd5e1" strokeWidth={1.5} strokeDasharray="5 3" fill="url(#projG)" dot={false}/>
                 <Area type="monotone" dataKey="revenue"   name="Revenue"   stroke={BLUE}    strokeWidth={2.5} fill="url(#revG)"
@@ -792,8 +792,8 @@ function WorkloadPage(){
           <div className="px-4 pb-5 pt-3">
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={workloadData} layout="vertical" margin={{top:0,right:16,bottom:0,left:56}} barSize={9}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" horizontal={false}/>
-                <XAxis type="number" domain={[0,100]} tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf3" horizontal={false}/>
+                <XAxis type="number" domain={[0,100]} tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
                 <YAxis type="category" dataKey="name" tick={{fontSize:11,fill:"#64748b",fontFamily:"Manrope",fontWeight:600}} axisLine={false} tickLine={false} width={68}/>
                 <Tooltip content={<Tip/>}/>
                 <Bar dataKey="capacity" name="Capacity %" radius={[0,6,6,0]}>
@@ -809,9 +809,9 @@ function WorkloadPage(){
           <div className="px-4 pb-5 pt-3">
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={weeklyData} barCategoryGap="35%" barGap={2} margin={{top:4,right:4,bottom:0,left:-14}}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false}/>
-                <XAxis dataKey="day" tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf3" vertical={false}/>
+                <XAxis dataKey="day" tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<Tip/>}/>
                 <Bar dataKey="tasks"     name="Assigned"  fill={TRACK} radius={[4,4,0,0]}/>
                 <Bar dataKey="completed" name="Completed" fill={BLUE}  radius={[4,4,0,0]}/>
@@ -969,9 +969,9 @@ function RevenuePage(){
         <div className="px-4 pb-5 pt-3">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={clientRevData} barCategoryGap="32%" barGap={3} margin={{top:4,right:4,bottom:0,left:-14}}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false}/>
-              <XAxis dataKey="client" tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8edf3" vertical={false}/>
+              <XAxis dataKey="client" tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
               <Tooltip content={<Tip/>}/>
               <Bar dataKey="contracted" name="Contracted" fill={TRACK} radius={[5,5,0,0]}/>
               <Bar dataKey="collected"  name="Collected"  fill={BLUE}  radius={[5,5,0,0]}/>
@@ -986,9 +986,9 @@ function RevenuePage(){
           <div className="px-4 pb-5 pt-3">
             <ResponsiveContainer width="100%" height={170}>
               <LineChart data={revenueData} margin={{top:8,right:4,bottom:0,left:-14}}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false}/>
-                <XAxis dataKey="month" tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fontSize:10,fill:"#94a3b8",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf3" vertical={false}/>
+                <XAxis dataKey="month" tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fontSize:10,fill:"#64748b",fontFamily:"Manrope"}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v/1000}k`}/>
                 <Tooltip content={<Tip/>}/>
                 <Line type="monotone" dataKey="revenue" name="Revenue" stroke={BLUE} strokeWidth={2.5}
                   dot={{r:4,fill:BLUE,strokeWidth:2,stroke:"white"}}
@@ -1011,7 +1011,7 @@ function RevenuePage(){
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background:inv.dot}}/>
                   <div>
                     <p className="text-[13px] font-semibold text-slate-800">{inv.client}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">{inv.days}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">{inv.days}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
