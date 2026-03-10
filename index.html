@@ -9,7 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.min.js"></script>
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -1119,24 +1120,34 @@ function Sidebar({page,setPage}){
   const w=col?52:224;
   return(
     <div className="sidebar-transition" style={{width:w,flexShrink:0,background:"white",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,overflow:"hidden",...SANS}}>
-      <div style={{padding:"16px 10px 12px",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between"}}>
-        {!col&&(
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <div style={{width:30,height:30,borderRadius:9,background:BLUE,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <span className="mso mso-fill" style={{fontSize:15,color:"white"}}>radar</span>
+      <div style={{padding:"16px 10px 12px",display:"flex",flexDirection:col?"column":"row",alignItems:"center",justifyContent:col?"center":"space-between",gap:col?8:0}}>
+        {col?(
+          <>
+            <button onClick={()=>setCol(!col)} style={{width:26,height:26,borderRadius:7,background:"#f8fafc",border:"1px solid #e2e8f0",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",flexShrink:0}}
+              onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"}
+              onMouseLeave={e=>e.currentTarget.style.background="#f8fafc"}>
+              <span className="mso" style={{fontSize:15}}>chevron_right</span>
+            </button>
+            <div style={{width:30,height:30,borderRadius:9,background:BLUE,display:"flex",alignItems:"center",justifyContent:"center"}}><span className="mso mso-fill" style={{fontSize:15,color:"white"}}>radar</span></div>
+          </>
+        ):(
+          <>
+            <div style={{display:"flex",alignItems:"center",gap:9}}>
+              <div style={{width:30,height:30,borderRadius:9,background:BLUE,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span className="mso mso-fill" style={{fontSize:15,color:"white"}}>radar</span>
+              </div>
+              <div>
+                <span style={{fontWeight:800,fontSize:15,color:"#0f172a",letterSpacing:-0.3}}>Orbit</span>
+                <p style={{fontSize:8,fontWeight:700,letterSpacing:"0.12em",color:"#cbd5e1",textTransform:"uppercase",marginTop:1}}>Project Intelligence</p>
+              </div>
             </div>
-            <div>
-              <span style={{fontWeight:800,fontSize:15,color:"#0f172a",letterSpacing:-0.3}}>Orbit</span>
-              <p style={{fontSize:8,fontWeight:700,letterSpacing:"0.12em",color:"#cbd5e1",textTransform:"uppercase",marginTop:1}}>Project Intelligence</p>
-            </div>
-          </div>
+            <button onClick={()=>setCol(!col)} style={{width:26,height:26,borderRadius:7,background:"#f8fafc",border:"1px solid #e2e8f0",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",flexShrink:0,marginLeft:8}}
+              onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"}
+              onMouseLeave={e=>e.currentTarget.style.background="#f8fafc"}>
+              <span className="mso" style={{fontSize:15}}>chevron_left</span>
+            </button>
+          </>
         )}
-        {col&&<div style={{width:30,height:30,borderRadius:9,background:BLUE,display:"flex",alignItems:"center",justifyContent:"center"}}><span className="mso mso-fill" style={{fontSize:15,color:"white"}}>radar</span></div>}
-        <button onClick={()=>setCol(!col)} style={{width:26,height:26,borderRadius:7,background:"#f8fafc",border:"1px solid #e2e8f0",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",flexShrink:0,marginLeft:col?0:8}}
-          onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"}
-          onMouseLeave={e=>e.currentTarget.style.background="#f8fafc"}>
-          <span className="mso" style={{fontSize:15}}>{col?"chevron_right":"chevron_left"}</span>
-        </button>
       </div>
       <div style={{borderBottom:"1px solid #f1f5f9"}}/>
       <nav style={{padding:"10px 8px",flex:1,overflowY:"auto",overflowX:"hidden"}}>
